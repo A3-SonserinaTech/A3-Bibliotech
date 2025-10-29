@@ -2,7 +2,7 @@
 O BIBLIOTECH é um sistema de gerenciamento de biblioteca simples e eficiente. Desenvolvido para facilitar a catalogação, empréstimo e devolução de livros.
 
 
-# 📘 Product Backlog – Projeto BIBLIOTECH
+# Product Backlog – Projeto BIBLIOTECH
 
 ## 1. Configuração Inicial do Projeto
 - [ ] Criar repositório no GitHub  
