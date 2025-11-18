@@ -2,8 +2,9 @@ package dao;
 
 import database.DatabaseManager;
 import model.Usuario;
+import model.TipoUsuario;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach; // Novo import
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -16,79 +17,76 @@ class UsuarioDAOTest {
 
     private static UsuarioDAO usuarioDAO = new UsuarioDAO();
 
-    // Roda uma vez antes de TODOS os testes
     @BeforeAll
     static void setUpGeral() {
-        // Garante que o banco e as tabelas existem
         DatabaseManager.inicializarBanco();
     }
 
-    // Roda ANTES DE CADA teste (@Test)
     @BeforeEach
     void setUpCadaTeste() {
-        // Limpa a tabela de usuários para que um teste não interfira no outro
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:biblioteca.db");
              Statement stmt = conn.createStatement()) {
-
             stmt.execute("DELETE FROM usuarios");
-
         } catch (Exception e) {
-            System.out.println("Erro ao limpar tabela de usuários: " + e.getMessage());
+            System.out.println("Erro ao limpar tabela: " + e.getMessage());
         }
     }
 
     @Test
     void testAdicionarEListarUsuario() {
-        // 1. Preparar
-        Usuario novoUsuario = new Usuario("Ana Silva", "ana.silva@email.com", "11987654321");
+        // Construtor com 5 argumentos: Nome, Email, Telefone, Senha, Tipo
+        Usuario novoUsuario = new Usuario("Ana Silva", "ana.silva@email.com", "11987654321", "senha123", TipoUsuario.LEITOR);
 
-        // 2. Agir
         boolean sucessoAdd = usuarioDAO.adicionarUsuario(novoUsuario);
         List<Usuario> usuarios = usuarioDAO.listarTodosUsuarios();
 
-        // 3. Verificar
-        assertTrue(sucessoAdd); // Verifica se a adição retornou true
-        assertEquals(1, usuarios.size()); // Verifica se a lista tem 1 usuário
-        assertEquals("Ana Silva", usuarios.get(0).getNome()); // Verifica o nome
+        assertTrue(sucessoAdd);
+        assertEquals(1, usuarios.size());
+        assertEquals("Ana Silva", usuarios.get(0).getNome());
+        assertEquals(TipoUsuario.LEITOR, usuarios.get(0).getTipoUsuario());
     }
 
     @Test
     void testAtualizarUsuario() {
-        // 1. Preparar (Adiciona um usuário primeiro)
-        Usuario usuario = new Usuario("Carlos Lima", "carlos.lima@email.com", "21999998888");
+        Usuario usuario = new Usuario("Carlos Lima", "carlos.lima@email.com", "21999998888", "admin456", TipoUsuario.BIBLIOTECARIO);
         usuarioDAO.adicionarUsuario(usuario);
 
-        // Pega o usuário do banco (para ter o ID)
         Usuario usuarioDoBanco = usuarioDAO.listarTodosUsuarios().get(0);
-
-        // 2. Agir (Muda o nome e atualiza)
         usuarioDoBanco.setNome("Carlos Lima Santos");
-        boolean sucessoUpdate = usuarioDAO.atualizarUsuario(usuarioDoBanco);
+        usuarioDoBanco.setTipoUsuario(TipoUsuario.LEITOR);
 
-        // Pega o usuário atualizado
+        boolean sucessoUpdate = usuarioDAO.atualizarUsuario(usuarioDoBanco);
         Usuario usuarioAtualizado = usuarioDAO.listarTodosUsuarios().get(0);
 
-        // 3. Verificar
-        assertTrue(sucessoUpdate); // Verifica se o update retornou true
-        assertEquals(1, usuarioDAO.listarTodosUsuarios().size()); // Garante que ainda só temos 1 usuário
-        assertEquals("Carlos Lima Santos", usuarioAtualizado.getNome()); // Verifica se o nome mudou
+        assertTrue(sucessoUpdate);
+        assertEquals("Carlos Lima Santos", usuarioAtualizado.getNome());
+        assertEquals(TipoUsuario.LEITOR, usuarioAtualizado.getTipoUsuario());
+    }
+
+    @Test
+    void testLoginSucessoEFalha() {
+        Usuario admin = new Usuario("Admin", "admin@bib.com", "999999999", "admin123", TipoUsuario.BIBLIOTECARIO);
+        usuarioDAO.adicionarUsuario(admin);
+
+        Usuario usuarioLogado = usuarioDAO.buscarPorEmailESenha("admin@bib.com", "admin123");
+        Usuario loginFalho = usuarioDAO.buscarPorEmailESenha("admin@bib.com", "senhaErrada");
+
+        assertNotNull(usuarioLogado);
+        assertEquals(TipoUsuario.BIBLIOTECARIO, usuarioLogado.getTipoUsuario());
+        assertNull(loginFalho);
     }
 
     @Test
     void testRemoverUsuario() {
-        // 1. Preparar (Adiciona um usuário)
-        Usuario usuario = new Usuario("Beatriz Costa", "bia.costa@email.com", "31888887777");
+        Usuario usuario = new Usuario("Beatriz Costa", "bia.costa@email.com", "31888887777", "b4u", TipoUsuario.LEITOR);
         usuarioDAO.adicionarUsuario(usuario);
 
-        // Pega o ID do usuário adicionado
         int idParaRemover = usuarioDAO.listarTodosUsuarios().get(0).getId();
 
-        // 2. Agir
         boolean sucessoRemove = usuarioDAO.removerUsuario(idParaRemover);
         List<Usuario> usuarios = usuarioDAO.listarTodosUsuarios();
 
-        // 3. Verificar
-        assertTrue(sucessoRemove); // Verifica se a remoção retornou true
-        assertEquals(0, usuarios.size()); // Verifica se a lista está vazia
+        assertTrue(sucessoRemove);
+        assertEquals(0, usuarios.size());
     }
 }

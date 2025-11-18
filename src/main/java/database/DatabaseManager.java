@@ -28,7 +28,9 @@ public class DatabaseManager {
                 + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + " nome TEXT NOT NULL,"
                 + " email TEXT UNIQUE NOT NULL,"
-                + " telefone TEXT"
+                + " telefone TEXT,"
+                + " senha TEXT NOT NULL,"           // <-- NOVO: Armazena a senha
+                + " tipo_usuario TEXT NOT NULL"     // <-- NOVO: Armazena o TipoUsuario (como texto)
                 + ");";
 
         // criar a tabela de Empréstimos (relaciona Livros e Usuários)
