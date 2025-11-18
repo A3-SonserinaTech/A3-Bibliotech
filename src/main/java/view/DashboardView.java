@@ -50,13 +50,16 @@ public class DashboardView extends JFrame {
         // --- 3. Ações dos Botões ---
 
         btnLivros.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Abrindo tela de Livros... (Em breve)");
+            // Instancia e abre a tela de gerenciamento de livros
+            LivroView telaLivros = new LivroView();
+            telaLivros.setVisible(true);
         });
 
         btnUsuarios.addActionListener(e -> {
-            // Apenas Admin pode gerenciar usuários?
+            // Verifica se é Admin antes de abrir
             if (usuarioLogado.getTipoUsuario() == TipoUsuario.BIBLIOTECARIO) {
-                JOptionPane.showMessageDialog(this, "Abrindo tela de Usuários... (Em breve)");
+                UsuarioView telaUsuarios = new UsuarioView();
+                telaUsuarios.setVisible(true);
             } else {
                 JOptionPane.showMessageDialog(this, "Acesso negado. Apenas Bibliotecários.", "Erro", JOptionPane.ERROR_MESSAGE);
             }
