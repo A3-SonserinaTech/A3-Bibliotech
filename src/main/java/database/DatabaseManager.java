@@ -5,10 +5,9 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-// Esta é a definição da classe.
 public class DatabaseManager {
 
-    // Define o nome do arquivo do banco de dados (constante)
+    // Define o nome do arquivo do banco de dados
     private static final String DATABASE_URL = "jdbc:sqlite:biblioteca.db";
 
     public static void inicializarBanco() {
@@ -44,8 +43,6 @@ public class DatabaseManager {
                 + " FOREIGN KEY (id_usuario) REFERENCES usuarios(id)"
                 + ");";
 
-        // Este "try-with-resources" garante que a conexão (conn) e o statement (stmt)
-        // sejam fechados automaticamente no final, mesmo se um erro ocorrer.
         try (Connection conn = DriverManager.getConnection(DATABASE_URL);
              Statement stmt = conn.createStatement()) {
 

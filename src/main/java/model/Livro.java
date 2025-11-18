@@ -9,7 +9,7 @@ public class Livro {
     private int ano;
     private boolean disponivel;
 
-    // Construtor vazio (boa prática)
+    // Construtor vazio
     public Livro() {
     }
 
