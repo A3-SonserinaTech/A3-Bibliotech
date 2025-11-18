@@ -5,6 +5,8 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import dao.LivroDAO;
 import model.Livro;
+import model.TipoUsuario;
+import model.Usuario;
 import java.util.List;
 
 public class LivroView extends JFrame {
@@ -12,27 +14,32 @@ public class LivroView extends JFrame {
     private JTable tabelaLivros;
     private DefaultTableModel tableModel;
 
-    public LivroView() {
+    // Botões agora são atributos da classe para podermos esconder depois
+    private JButton btnAdicionar;
+    private JButton btnEditar;
+    private JButton btnExcluir;
+
+    // Construtor atualizado: Recebe o usuário logado
+    public LivroView(Usuario usuarioLogado) {
         super("Gerenciamento de Livros");
         setSize(800, 600);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Fecha apenas esta janela, não o app todo
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        inicializarComponentes();
+        inicializarComponentes(usuarioLogado); // Passa o usuário para a configuração
         carregarTabela();
     }
 
-    private void inicializarComponentes() {
-        // Painel superior para botões de ação
+    private void inicializarComponentes(Usuario usuarioLogado) {
         JPanel painelBotoes = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
-        // 1. CRIA os botões primeiro
-        JButton btnAdicionar = new JButton("Adicionar Livro");
-        JButton btnEditar = new JButton("Editar");
-        JButton btnExcluir = new JButton("Excluir");
+        // 1. CRIA os botões
+        btnAdicionar = new JButton("Adicionar Livro");
+        btnEditar = new JButton("Editar");
+        btnExcluir = new JButton("Excluir");
 
-        // 2. CONFIGURA as ações (Listeners)
+        // 2. CONFIGURA as ações
         btnAdicionar.addActionListener(e -> adicionarLivro());
         btnExcluir.addActionListener(e -> excluirLivro());
         btnEditar.addActionListener(e -> editarLivro());
@@ -43,6 +50,15 @@ public class LivroView extends JFrame {
         painelBotoes.add(btnExcluir);
 
         add(painelBotoes, BorderLayout.NORTH);
+
+        // --- LÓGICA DE SEGURANÇA ---
+        // Se o usuário for LEITOR, esconde os botões de modificação
+        if (usuarioLogado.getTipoUsuario() == TipoUsuario.LEITOR) {
+            btnAdicionar.setVisible(false);
+            btnEditar.setVisible(false);
+            btnExcluir.setVisible(false);
+        }
+        // ---------------------------
 
         // Configuração da Tabela
         String[] colunas = {"ID", "Título", "Autor", "ISBN", "Ano", "Status"};
@@ -60,10 +76,9 @@ public class LivroView extends JFrame {
         JScrollPane scrollPane = new JScrollPane(tabelaLivros);
         add(scrollPane, BorderLayout.CENTER);
     }
-    private void carregarTabela() {
-        // Limpa linhas antigas
-        tableModel.setRowCount(0);
 
+    private void carregarTabela() {
+        tableModel.setRowCount(0);
         LivroDAO dao = new LivroDAO();
         List<Livro> listaLivros = dao.listarTodosLivros();
 
@@ -79,135 +94,88 @@ public class LivroView extends JFrame {
             tableModel.addRow(row);
         }
     }
+
     private void adicionarLivro() {
-        // 1. Criar os campos do formulário
         JTextField txtTitulo = new JTextField();
         JTextField txtAutor = new JTextField();
         JTextField txtIsbn = new JTextField();
         JTextField txtAno = new JTextField();
 
-        // 2. Montar o painel com os campos
         JPanel panel = new JPanel(new GridLayout(4, 2));
-        panel.add(new JLabel("Título:"));
-        panel.add(txtTitulo);
-        panel.add(new JLabel("Autor:"));
-        panel.add(txtAutor);
-        panel.add(new JLabel("ISBN:"));
-        panel.add(txtIsbn);
-        panel.add(new JLabel("Ano:"));
-        panel.add(txtAno);
+        panel.add(new JLabel("Título:")); panel.add(txtTitulo);
+        panel.add(new JLabel("Autor:")); panel.add(txtAutor);
+        panel.add(new JLabel("ISBN:")); panel.add(txtIsbn);
+        panel.add(new JLabel("Ano:")); panel.add(txtAno);
 
-        // 3. Mostrar o diálogo e esperar o usuário clicar em OK
-        int resultado = JOptionPane.showConfirmDialog(this, panel,
-                "Novo Livro", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        int result = JOptionPane.showConfirmDialog(this, panel, "Novo Livro", JOptionPane.OK_CANCEL_OPTION);
 
-        if (resultado == JOptionPane.OK_OPTION) {
+        if (result == JOptionPane.OK_OPTION) {
             try {
-                // 4. Capturar dados
-                String titulo = txtTitulo.getText();
-                String autor = txtAutor.getText();
-                String isbn = txtIsbn.getText();
-                int ano = Integer.parseInt(txtAno.getText()); // Pode dar erro se não for número
-
-                // 5. Salvar no banco
-                Livro novoLivro = new Livro(titulo, autor, isbn, ano);
-                LivroDAO dao = new LivroDAO();
-
-                if (dao.adicionarLivro(novoLivro)) {
-                    JOptionPane.showMessageDialog(this, "Livro salvo com sucesso!");
-                    carregarTabela(); // Atualiza a tabela na hora
-                } else {
-                    JOptionPane.showMessageDialog(this, "Erro ao salvar livro.", "Erro", JOptionPane.ERROR_MESSAGE);
-                }
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "O Ano deve ser um número válido!", "Erro", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-    private void excluirLivro() {
-        // 1. Verifica qual linha está selecionada
-        int linhaSelecionada = tabelaLivros.getSelectedRow();
-
-        if (linhaSelecionada == -1) {
-            JOptionPane.showMessageDialog(this, "Selecione um livro na tabela para excluir.");
-            return;
-        }
-
-        // 2. Pega o ID da coluna 0 daquela linha
-        int idLivro = (int) tabelaLivros.getValueAt(linhaSelecionada, 0);
-
-        // 3. Pede confirmação
-        int confirmacao = JOptionPane.showConfirmDialog(this,
-                "Tem certeza que deseja excluir o livro selecionado?",
-                "Confirmar Exclusão",
-                JOptionPane.YES_NO_OPTION);
-
-        if (confirmacao == JOptionPane.YES_OPTION) {
-            LivroDAO dao = new LivroDAO();
-            if (dao.removerLivro(idLivro)) {
-                JOptionPane.showMessageDialog(this, "Livro excluído com sucesso!");
-                carregarTabela(); // Atualiza a lista visualmente
-            } else {
-                JOptionPane.showMessageDialog(this, "Erro ao excluir o livro.", "Erro", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-    private void editarLivro() {
-        int linhaSelecionada = tabelaLivros.getSelectedRow();
-
-        if (linhaSelecionada == -1) {
-            JOptionPane.showMessageDialog(this, "Selecione um livro para editar.");
-            return;
-        }
-
-        // 1. Recupera os dados da linha selecionada na tabela
-        int id = (int) tabelaLivros.getValueAt(linhaSelecionada, 0);
-        String tituloAtual = (String) tabelaLivros.getValueAt(linhaSelecionada, 1);
-        String autorAtual = (String) tabelaLivros.getValueAt(linhaSelecionada, 2);
-        String isbnAtual = (String) tabelaLivros.getValueAt(linhaSelecionada, 3);
-        int anoAtual = (int) tabelaLivros.getValueAt(linhaSelecionada, 4);
-        String statusTexto = (String) tabelaLivros.getValueAt(linhaSelecionada, 5);
-        boolean disponivel = statusTexto.equals("Disponível");
-
-        // 2. Cria os campos JÁ PREENCHIDOS com os dados atuais
-        JTextField txtTitulo = new JTextField(tituloAtual);
-        JTextField txtAutor = new JTextField(autorAtual);
-        JTextField txtIsbn = new JTextField(isbnAtual);
-        JTextField txtAno = new JTextField(String.valueOf(anoAtual));
-
-        JPanel panel = new JPanel(new GridLayout(4, 2));
-        panel.add(new JLabel("Título:"));
-        panel.add(txtTitulo);
-        panel.add(new JLabel("Autor:"));
-        panel.add(txtAutor);
-        panel.add(new JLabel("ISBN:"));
-        panel.add(txtIsbn);
-        panel.add(new JLabel("Ano:"));
-        panel.add(txtAno);
-
-        int resultado = JOptionPane.showConfirmDialog(this, panel,
-                "Editar Livro", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-
-        if (resultado == JOptionPane.OK_OPTION) {
-            try {
-                // 3. Captura os novos dados
-                String novoTitulo = txtTitulo.getText();
-                String novoAutor = txtAutor.getText();
-                String novoIsbn = txtIsbn.getText();
-                int novoAno = Integer.parseInt(txtAno.getText());
-
-                // 4. Cria objeto com o ID original (importante para o UPDATE funcionar)
-                Livro livroEditado = new Livro(id, novoTitulo, novoAutor, novoIsbn, novoAno, disponivel);
-
-                LivroDAO dao = new LivroDAO();
-                if (dao.atualizarLivro(livroEditado)) {
-                    JOptionPane.showMessageDialog(this, "Livro atualizado com sucesso!");
+                Livro novo = new Livro(txtTitulo.getText(), txtAutor.getText(), txtIsbn.getText(), Integer.parseInt(txtAno.getText()));
+                if (new LivroDAO().adicionarLivro(novo)) {
                     carregarTabela();
+                    JOptionPane.showMessageDialog(this, "Livro salvo!");
                 } else {
-                    JOptionPane.showMessageDialog(this, "Erro ao atualizar.", "Erro", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Erro ao salvar.", "Erro", JOptionPane.ERROR_MESSAGE);
                 }
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Ano inválido.", "Erro", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void excluirLivro() {
+        int linha = tabelaLivros.getSelectedRow();
+        if (linha == -1) {
+            JOptionPane.showMessageDialog(this, "Selecione um livro.");
+            return;
+        }
+        int id = (int) tabelaLivros.getValueAt(linha, 0);
+        if (JOptionPane.showConfirmDialog(this, "Tem certeza?", "Excluir", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+            if (new LivroDAO().removerLivro(id)) {
+                carregarTabela();
+                JOptionPane.showMessageDialog(this, "Excluído!");
+            }
+        }
+    }
+
+    private void editarLivro() {
+        int linha = tabelaLivros.getSelectedRow();
+        if (linha == -1) {
+            JOptionPane.showMessageDialog(this, "Selecione um livro.");
+            return;
+        }
+
+        // Recupera dados
+        int id = (int) tabelaLivros.getValueAt(linha, 0);
+        String titulo = (String) tabelaLivros.getValueAt(linha, 1);
+        String autor = (String) tabelaLivros.getValueAt(linha, 2);
+        String isbn = (String) tabelaLivros.getValueAt(linha, 3);
+        int ano = (int) tabelaLivros.getValueAt(linha, 4);
+        String status = (String) tabelaLivros.getValueAt(linha, 5);
+        boolean disponivel = status.equals("Disponível");
+
+        // Preenche campos
+        JTextField txtTitulo = new JTextField(titulo);
+        JTextField txtAutor = new JTextField(autor);
+        JTextField txtIsbn = new JTextField(isbn);
+        JTextField txtAno = new JTextField(String.valueOf(ano));
+
+        JPanel panel = new JPanel(new GridLayout(4, 2));
+        panel.add(new JLabel("Título:")); panel.add(txtTitulo);
+        panel.add(new JLabel("Autor:")); panel.add(txtAutor);
+        panel.add(new JLabel("ISBN:")); panel.add(txtIsbn);
+        panel.add(new JLabel("Ano:")); panel.add(txtAno);
+
+        if (JOptionPane.showConfirmDialog(this, panel, "Editar", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+            try {
+                Livro editado = new Livro(id, txtTitulo.getText(), txtAutor.getText(), txtIsbn.getText(), Integer.parseInt(txtAno.getText()), disponivel);
+                if (new LivroDAO().atualizarLivro(editado)) {
+                    carregarTabela();
+                    JOptionPane.showMessageDialog(this, "Atualizado!");
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Erro nos dados.");
             }
         }
     }

@@ -50,8 +50,8 @@ public class DashboardView extends JFrame {
         // --- 3. Ações dos Botões ---
 
         btnLivros.addActionListener(e -> {
-            // Instancia e abre a tela de gerenciamento de livros
-            LivroView telaLivros = new LivroView();
+            // CORREÇÃO: Passamos o 'usuarioLogado' para a tela de livros
+            LivroView telaLivros = new LivroView(usuarioLogado);
             telaLivros.setVisible(true);
         });
 
