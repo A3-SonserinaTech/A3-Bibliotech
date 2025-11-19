@@ -1,25 +1,31 @@
 package view;
 
+import dao.EmprestimoDAO;
+import dao.LivroDAO;
+import dao.UsuarioDAO;
+import model.Emprestimo;
+import model.Livro;
+import model.TipoUsuario;
+import model.Usuario;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import dao.EmprestimoDAO;
-import model.Emprestimo;
 import java.util.List;
-import dao.LivroDAO;
-import dao.UsuarioDAO;
-import model.Livro;
-import model.Usuario;
-import java.util.Vector; // Usado para o JComboBox
+import java.util.Vector;
 
 public class EmprestimoView extends JFrame {
 
     private JTable tabelaEmprestimos;
     private DefaultTableModel tableModel;
+    private Usuario usuarioLogado; // <-- NOVO: Guardamos quem está usando a tela
 
-    public EmprestimoView() {
+    // Construtor atualizado recebendo o usuarioLogado
+    public EmprestimoView(Usuario usuarioLogado) {
         super("Gerenciamento de Empréstimos");
-        setSize(900, 600); // Um pouco mais larga para caber as datas
+        this.usuarioLogado = usuarioLogado; // <-- NOVO: Armazena o usuário
+
+        setSize(900, 600);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
@@ -34,17 +40,18 @@ public class EmprestimoView extends JFrame {
         JButton btnNovo = new JButton("Novo Empréstimo");
         JButton btnDevolver = new JButton("Registrar Devolução");
 
-        // Ações (Listeners)
         btnNovo.addActionListener(e -> novoEmprestimo());
         btnDevolver.addActionListener(e -> devolverLivro());
 
         painelBotoes.add(btnNovo);
-        painelBotoes.add(btnDevolver);
+        // Apenas Bibliotecários podem registrar devolução (dar baixa no sistema)
+        if (usuarioLogado.getTipoUsuario() == TipoUsuario.BIBLIOTECARIO) {
+            painelBotoes.add(btnDevolver);
+        }
 
         add(painelBotoes, BorderLayout.NORTH);
 
-        // Colunas: ID, Livro, Usuário, Data Empréstimo, Data Devolução
-        String[] colunas = {"ID", "ID Livro", "ID Usuário", "Data Empréstimo", "Status"};
+        String[] colunas = {"ID", "Livro", "Usuário", "Data Empréstimo", "Status"};
 
         tableModel = new DefaultTableModel(colunas, 0) {
             @Override
@@ -59,31 +66,57 @@ public class EmprestimoView extends JFrame {
         JScrollPane scrollPane = new JScrollPane(tabelaEmprestimos);
         add(scrollPane, BorderLayout.CENTER);
     }
+
     private void carregarTabela() {
         tableModel.setRowCount(0);
         EmprestimoDAO dao = new EmprestimoDAO();
         List<Emprestimo> lista = dao.listarEmprestimosAtivos();
 
+        // Pré-carrega listas para buscar nomes (traduzir ID para Nome)
+        List<Livro> todosLivros = new LivroDAO().listarTodosLivros();
+        List<Usuario> todosUsuarios = new UsuarioDAO().listarTodosUsuarios();
+
         for (Emprestimo emp : lista) {
+            // --- 1. FILTRO DE SEGURANÇA ---
+            // Se for Leitor e o empréstimo NÃO for dele, pula para o próximo (esconde)
+            if (usuarioLogado.getTipoUsuario() == TipoUsuario.LEITOR && emp.getIdUsuario() != usuarioLogado.getId()) {
+                continue;
+            }
+
+            // --- 2. TRADUÇÃO DE ID PARA NOME ---
+            String tituloLivro = "ID " + emp.getIdLivro(); // Padrão caso não ache
+            for (Livro l : todosLivros) {
+                if (l.getId() == emp.getIdLivro()) {
+                    tituloLivro = l.getTitulo();
+                    break;
+                }
+            }
+
+            String nomeUsuario = "ID " + emp.getIdUsuario(); // Padrão caso não ache
+            for (Usuario u : todosUsuarios) {
+                if (u.getId() == emp.getIdUsuario()) {
+                    nomeUsuario = u.getNome();
+                    break;
+                }
+            }
+
             Object[] row = {
                     emp.getId(),
-                    emp.getIdLivro(),
-                    emp.getIdUsuario(),
+                    tituloLivro, // Mostra o Título
+                    nomeUsuario, // Mostra o Nome
                     emp.getDataEmprestimo(),
                     "Em Aberto"
             };
             tableModel.addRow(row);
         }
     }
+
     private void novoEmprestimo() {
-        // 1. Buscas dados para preencher as caixas de seleção
         LivroDAO livroDAO = new LivroDAO();
         UsuarioDAO usuarioDAO = new UsuarioDAO();
 
+        // Carrega livros disponíveis
         List<Livro> todosLivros = livroDAO.listarTodosLivros();
-        List<Usuario> todosUsuarios = usuarioDAO.listarTodosUsuarios();
-
-        // Vetores para o JComboBox
         Vector<Livro> livrosDisponiveis = new Vector<>();
         for (Livro l : todosLivros) {
             if (l.isDisponivel()) {
@@ -91,24 +124,33 @@ public class EmprestimoView extends JFrame {
             }
         }
 
-        Vector<Usuario> listaUsuarios = new Vector<>(todosUsuarios);
-
         if (livrosDisponiveis.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Não há livros disponíveis para empréstimo.");
+            JOptionPane.showMessageDialog(this, "Não há livros disponíveis.");
             return;
         }
 
-        // 2. Cria os componentes visuais
+        // --- LÓGICA INTELIGENTE DE USUÁRIOS ---
+        Vector<Usuario> listaUsuarios = new Vector<>();
+
+        if (usuarioLogado.getTipoUsuario() == TipoUsuario.BIBLIOTECARIO) {
+            // Se for Bibliotecário, pode escolher QUALQUER usuário do banco
+            List<Usuario> todosUsuarios = usuarioDAO.listarTodosUsuarios();
+            listaUsuarios.addAll(todosUsuarios);
+        } else {
+            // Se for Leitor, a lista só tem ELE MESMO
+            listaUsuarios.add(usuarioLogado);
+        }
+        // --------------------------------------
+
         JComboBox<Livro> cbLivros = new JComboBox<>(livrosDisponiveis);
         JComboBox<Usuario> cbUsuarios = new JComboBox<>(listaUsuarios);
 
         JPanel panel = new JPanel(new GridLayout(2, 2));
         panel.add(new JLabel("Selecione o Livro:"));
         panel.add(cbLivros);
-        panel.add(new JLabel("Selecione o Usuário:"));
+        panel.add(new JLabel("Usuário:"));
         panel.add(cbUsuarios);
 
-        // 3. Mostra o diálogo
         int result = JOptionPane.showConfirmDialog(this, panel, "Novo Empréstimo", JOptionPane.OK_CANCEL_OPTION);
 
         if (result == JOptionPane.OK_OPTION) {
@@ -117,39 +159,35 @@ public class EmprestimoView extends JFrame {
 
             if (livroSelecionado != null && usuarioSelecionado != null) {
                 Emprestimo novo = new Emprestimo(livroSelecionado.getId(), usuarioSelecionado.getId());
-                EmprestimoDAO emprestimoDAO = new EmprestimoDAO();
+                EmprestimoDAO dao = new EmprestimoDAO();
 
-                if (emprestimoDAO.realizarEmprestimo(novo)) {
-                    JOptionPane.showMessageDialog(this, "Empréstimo registrado com sucesso!");
+                if (dao.realizarEmprestimo(novo)) {
+                    JOptionPane.showMessageDialog(this, "Sucesso!");
                     carregarTabela();
                 } else {
-                    JOptionPane.showMessageDialog(this, "Erro ao registrar empréstimo.", "Erro", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Erro ao registrar.", "Erro", JOptionPane.ERROR_MESSAGE);
                 }
             }
         }
     }
+
     private void devolverLivro() {
         int linha = tabelaEmprestimos.getSelectedRow();
         if (linha == -1) {
-            JOptionPane.showMessageDialog(this, "Selecione um empréstimo para devolver.");
+            JOptionPane.showMessageDialog(this, "Selecione um empréstimo.");
             return;
         }
 
-        // Recupera os IDs da linha selecionada
         int idEmprestimo = (int) tabelaEmprestimos.getValueAt(linha, 0);
         int idLivro = (int) tabelaEmprestimos.getValueAt(linha, 1);
 
-        int confirm = JOptionPane.showConfirmDialog(this, "Confirmar a devolução deste livro?", "Devolução", JOptionPane.YES_NO_OPTION);
-
-        if (confirm == JOptionPane.YES_OPTION) {
+        if (JOptionPane.showConfirmDialog(this, "Confirmar devolução?", "Devolução", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
             EmprestimoDAO dao = new EmprestimoDAO();
-
-            // Chama o método que atualiza a data de devolução e libera o livro
             if (dao.realizarDevolucao(idEmprestimo, idLivro)) {
-                JOptionPane.showMessageDialog(this, "Livro devolvido com sucesso!");
-                carregarTabela(); // Atualiza a lista (o empréstimo deve sumir pois não está mais "Em Aberto")
+                carregarTabela();
+                JOptionPane.showMessageDialog(this, "Devolvido!");
             } else {
-                JOptionPane.showMessageDialog(this, "Erro ao registrar devolução.", "Erro", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Erro.", "Erro", JOptionPane.ERROR_MESSAGE);
             }
         }
     }

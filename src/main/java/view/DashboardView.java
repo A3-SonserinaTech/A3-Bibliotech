@@ -64,16 +64,19 @@ public class DashboardView extends JFrame {
                 JOptionPane.showMessageDialog(this, "Acesso negado. Apenas Bibliotecários.", "Erro", JOptionPane.ERROR_MESSAGE);
             }
         });
-        // Abre a tela de empréstimos
+        // Abre a tela de empréstimos passando o usuário
         btnEmprestimos.addActionListener(e -> {
-            EmprestimoView tela = new EmprestimoView();
+            EmprestimoView tela = new EmprestimoView(usuarioLogado); // <--- Correção aqui
             tela.setVisible(true);
         });
 
-        // Abre a mesma tela de empréstimos (para devolução)
         btnDevolucoes.addActionListener(e -> {
-            EmprestimoView tela = new EmprestimoView();
-            tela.setVisible(true);
+            if (usuarioLogado.getTipoUsuario() == TipoUsuario.BIBLIOTECARIO) {
+                EmprestimoView tela = new EmprestimoView(usuarioLogado);
+                tela.setVisible(true);
+            } else {
+                JOptionPane.showMessageDialog(this, "Acesso negado. Apenas Bibliotecários", "Erro", JOptionPane.ERROR_MESSAGE);
+            }
         });
     }
 }
