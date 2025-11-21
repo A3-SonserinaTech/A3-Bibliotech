@@ -46,7 +46,7 @@ public class EmprestimoDAO {
                 pstmt.executeUpdate();
             }
 
-            // Se chegou até aqui, as duas operações deram certo.
+
             conn.commit(); // Confirma a transação
             return true;
 

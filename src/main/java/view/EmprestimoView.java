@@ -18,12 +18,12 @@ public class EmprestimoView extends JFrame {
 
     private JTable tabelaEmprestimos;
     private DefaultTableModel tableModel;
-    private Usuario usuarioLogado; // <-- NOVO: Guardamos quem está usando a tela
+    private Usuario usuarioLogado;
 
     // Construtor atualizado recebendo o usuarioLogado
     public EmprestimoView(Usuario usuarioLogado) {
         super("Gerenciamento de Empréstimos");
-        this.usuarioLogado = usuarioLogado; // <-- NOVO: Armazena o usuário
+        this.usuarioLogado = usuarioLogado;
 
         setSize(900, 600);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -77,7 +77,6 @@ public class EmprestimoView extends JFrame {
         List<Usuario> todosUsuarios = new UsuarioDAO().listarTodosUsuarios();
 
         for (Emprestimo emp : lista) {
-            // --- 1. FILTRO DE SEGURANÇA ---
             // Se for Leitor e o empréstimo NÃO for dele, pula para o próximo (esconde)
             if (usuarioLogado.getTipoUsuario() == TipoUsuario.LEITOR && emp.getIdUsuario() != usuarioLogado.getId()) {
                 continue;

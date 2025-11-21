@@ -24,8 +24,6 @@ public class LoginView extends JFrame {
         // Mudei o layout principal para BorderLayout para colocar a logo em cima
         setLayout(new BorderLayout(10, 10)); // Espaçamento entre as áreas
 
-        // --- Adicionar a Logo (Código Seguro) ---
-        // O caminho correto não inclui "/resources", começa direto na pasta interna "/img"
         java.net.URL imgUrl = getClass().getResource("/img/logo.png");
 
         if (imgUrl != null) {

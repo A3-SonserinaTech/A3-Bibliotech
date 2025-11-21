@@ -21,7 +21,7 @@ public class DashboardView extends JFrame {
 
         // --- 1. Cabeçalho (Topo) ---
         JPanel panelTopo = new JPanel();
-        panelTopo.setBackground(new Color(70, 130, 180)); // Um azul bonito
+        panelTopo.setBackground(new Color(70, 130, 180));
         JLabel lblBemVindo = new JLabel("Bem-vindo, " + usuarioLogado.getNome() + " (" + usuarioLogado.getTipoUsuario() + ")");
         lblBemVindo.setForeground(Color.WHITE);
         lblBemVindo.setFont(new Font("Arial", Font.BOLD, 18));
@@ -31,7 +31,7 @@ public class DashboardView extends JFrame {
 
         // --- 2. Área de Botões (Centro) ---
         JPanel panelBotoes = new JPanel();
-        panelBotoes.setLayout(new GridLayout(2, 2, 20, 20)); // Grade 2x2 com espaços
+        panelBotoes.setLayout(new GridLayout(2, 2, 20, 20)); // Grade 2x2
         panelBotoes.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20)); // Margem
 
         JButton btnLivros = new JButton("Gerenciar Livros");
@@ -50,7 +50,6 @@ public class DashboardView extends JFrame {
         // --- 3. Ações dos Botões ---
 
         btnLivros.addActionListener(e -> {
-            // CORREÇÃO: Passamos o 'usuarioLogado' para a tela de livros
             LivroView telaLivros = new LivroView(usuarioLogado);
             telaLivros.setVisible(true);
         });

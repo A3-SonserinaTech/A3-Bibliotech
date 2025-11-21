@@ -14,7 +14,7 @@ public class LivroView extends JFrame {
     private JTable tabelaLivros;
     private DefaultTableModel tableModel;
 
-    // Botões agora são atributos da classe para podermos esconder depois
+    // Botões agora são atributos da classe
     private JButton btnAdicionar;
     private JButton btnEditar;
     private JButton btnExcluir;
