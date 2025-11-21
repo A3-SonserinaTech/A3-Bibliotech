@@ -174,20 +174,51 @@ public class EmprestimoView extends JFrame {
     private void devolverLivro() {
         int linha = tabelaEmprestimos.getSelectedRow();
         if (linha == -1) {
-            JOptionPane.showMessageDialog(this, "Selecione um empréstimo.");
+            JOptionPane.showMessageDialog(this, "Selecione um empréstimo para devolver.");
             return;
         }
 
+        // 1. Pega o ID do EMPRÉSTIMO (Coluna 0) - Este continua sendo número, então OK
         int idEmprestimo = (int) tabelaEmprestimos.getValueAt(linha, 0);
-        int idLivro = (int) tabelaEmprestimos.getValueAt(linha, 1);
 
-        if (JOptionPane.showConfirmDialog(this, "Confirmar devolução?", "Devolução", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+        // 2. Pega o NOME do Livro na tabela (Coluna 1) - Agora é String
+        String nomeLivroNaTabela = (String) tabelaEmprestimos.getValueAt(linha, 1);
+
+        // 3. Precisa descobrir qual é o ID desse livro
+        int idLivro = -1;
+        LivroDAO livroDAO = new LivroDAO();
+        List<Livro> todosLivros = livroDAO.listarTodosLivros();
+
+        for (Livro l : todosLivros) {
+            if (l.getTitulo().equals(nomeLivroNaTabela)) {
+                idLivro = l.getId();
+                break;
+            }
+        }
+
+        // Fallback: Se não achou pelo nome (ex: se o nome mudou), tenta pegar do objeto Emprestimo direto no banco
+        if (idLivro == -1) {
+            // Isso é raro, mas por segurança, vamos buscar o empréstimo original
+            EmprestimoDAO empDao = new EmprestimoDAO();
+            List<Emprestimo> lista = empDao.listarEmprestimosAtivos();
+            for(Emprestimo e : lista) {
+                if(e.getId() == idEmprestimo) {
+                    idLivro = e.getIdLivro();
+                    break;
+                }
+            }
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this, "Confirmar a devolução de '" + nomeLivroNaTabela + "'?", "Devolução", JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
             EmprestimoDAO dao = new EmprestimoDAO();
+
             if (dao.realizarDevolucao(idEmprestimo, idLivro)) {
+                JOptionPane.showMessageDialog(this, "Livro devolvido com sucesso!");
                 carregarTabela();
-                JOptionPane.showMessageDialog(this, "Devolvido!");
             } else {
-                JOptionPane.showMessageDialog(this, "Erro.", "Erro", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Erro ao registrar devolução.", "Erro", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
